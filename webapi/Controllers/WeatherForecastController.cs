@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 
-namespace LoginPage_webapi.Controllers;
+namespace webapi.Controllers;
 
 [ApiController]
 [Route("[controller]")]

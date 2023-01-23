@@ -1,4 +1,4 @@
-namespace LoginPage_react;
+namespace react;
 
 public class WeatherForecast
 {

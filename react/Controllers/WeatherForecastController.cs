@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 
-namespace LoginPage_react.Controllers;
+namespace react.Controllers;
 
 [ApiController]
 [Route("[controller]")]

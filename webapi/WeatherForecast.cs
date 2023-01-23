@@ -1,4 +1,4 @@
-namespace LoginPage_webapi;
+namespace webapi;
 
 public class WeatherForecast
 {

@@ -1,6 +1,6 @@
 {
-  "short_name": "LoginPage_react",
-  "name": "LoginPage_react",
+  "short_name": "app_react",
+  "name": "app_react",
   "icons": [
     {
       "src": "favicon.ico",
