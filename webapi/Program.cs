@@ -6,9 +6,7 @@ internal class Program
         var builder = WebApplication.CreateBuilder(args);
         // Add services to the container.
 
-        // Add CoreWCF services to the ASP.NET Core app's DI container
         builder.Services.AddScoped<IICUTech, ICUTechClient>();
-
         builder.Services.AddControllers();
         // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
         builder.Services.AddEndpointsApiExplorer();
