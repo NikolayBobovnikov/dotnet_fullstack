@@ -119,10 +119,10 @@ public partial class LoginRequest
     {
     }
     
-    public LoginRequest(string UserName, string Password, string IPs)
+    public LoginRequest(string userName, string password, string IPs)
     {
-        this.UserName = UserName;
-        this.Password = Password;
+        this.UserName = userName;
+        this.Password = password;
         this.IPs = IPs;
     }
 }
