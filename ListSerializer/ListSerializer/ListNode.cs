@@ -1,16 +1,23 @@
 ﻿
 using System;
+using System.Drawing;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
 
 namespace ListSerializer
 {
+
     public class ListNode
     {
         public ListNode Previous;
         public ListNode Next;
         public ListNode Random;
+        public string Data;
+    }
+
+    public struct ListNodeData
+    {
         public string Data;
     }
 
@@ -22,28 +29,35 @@ namespace ListSerializer
 
         public void Serialize(Stream s)
         {
-            var tSpan = MemoryMarshal.CreateSpan(ref Count, 1);
-            var span = MemoryMarshal.AsBytes(tSpan);
-            s.Write(span);
+            //var v = default(ListNodeData);
+            var v = new ListNodeData() { Data = "Hello" };
+            int size = Marshal.SizeOf(v);
+            IntPtr ptr = Marshal.AllocHGlobal(size);
+
+            try
+            {
+                Marshal.StructureToPtr(v, ptr, false);
+                byte[] managedArray = new byte[size];
+                Marshal.Copy(ptr, managedArray, 0, size);
+                s.Write(managedArray, 0, size);
+            }
+            finally
+            {
+                // Free the unmanaged memory.
+                Marshal.FreeHGlobal(ptr);
+            }
         }
 
         public void Deserialize(Stream s)
         {
-
+            var v = default(ListNodeData);
+            int size = Marshal.SizeOf(v);
+            byte[] managedArray = new byte[size];
+            IntPtr ptr = Marshal.AllocHGlobal(size);
+            s.Read(managedArray, 0, size);
+            Marshal.Copy(managedArray, 0, ptr, size);
+            v = Marshal.PtrToStructure<ListNodeData>(ptr);
         }
     }
 
-    public static class Extensions
-    {
-        public static void Serialize(this ListNode node, Stream s)
-        {
-            var dataBytes = Encoding.UTF8.GetBytes(node.Data);
-            var len = Encoding.UTF8.GetByteCount(node.Data);
-        }
-
-        public static void Deserialize(this Stream s)
-        {
-
-        }
-    }
 }
