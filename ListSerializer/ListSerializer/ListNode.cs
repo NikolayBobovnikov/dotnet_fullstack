@@ -1,5 +1,6 @@
 ﻿
 using System;
+using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -14,7 +15,7 @@ namespace ListSerializer
     public static class Extensions
     {
         public static void WriteMarshal<T>(this Stream stream, T value)
-            where T : unmanaged
+            where T : struct
         {
             int size = Marshal.SizeOf(value);
             IntPtr ptr = Marshal.AllocHGlobal(size);
@@ -33,7 +34,7 @@ namespace ListSerializer
         }
 
         public static T ReadMarshal<T>(this Stream stream)
-            where T : unmanaged
+            where T : struct
         {
             T result = default;
             int size = Marshal.SizeOf(result);
@@ -95,6 +96,12 @@ namespace ListSerializer
             // Map pointers to positions to resolve Random
             // Map ListNode class to ListNodeFlat structure containing node positions instead of pointers
             // Write flatten list of ListNodeFlat's into stream
+
+            var flatten = Flatten(Head);
+            foreach(var flat in flatten)
+            {
+                s.WriteMarshal(flat);
+            }
         }
 
         public void Deserialize(Stream s)
@@ -103,24 +110,32 @@ namespace ListSerializer
             // Restore pointers to Random nodes from positions in flatten structure
         }
 
-        #region Private types
+        #region Public types
 
         /// <summary>
         /// Intermediary class for storing instead of ListNode.
         /// </summary>
-        private struct ListNodeFlat
+        public struct ListNodeFlat
         {
-            public int PreviousPosition;
-            public int NextPosition;
-            public int Random;
+            public ListNodeFlat(ListNodeFlat other)
+            {
+                PrevPosition = other.PrevPosition;
+                NextPosition = other.NextPosition;
+                Random = other.Random;
+                Data = other.Data;
+            }
+
+            public int PrevPosition = NULL_POS;
+            public int NextPosition = NULL_POS;
+            public int Random = NULL_POS;
             public string Data;
         }
 
         #endregion
 
-        #region Private methods
+        #region Public methods
 
-        private static ListRandom _RestoreFromFlatten(IList<ListNodeFlat> flatten)
+        public static ListRandom RestoreFromFlatten(IList<ListNodeFlat> flatten)
         {
             // create ListNodes from corresponding flatten elements and store them into list
             var nodes = flatten.Select(x => new ListNode() { Data = x.Data }).ToList();
@@ -139,6 +154,74 @@ namespace ListSerializer
                 Count = nodes.Count()
             };
         }
+
+        public static IList<ListNodeFlat> Flatten(ListNode linkedList)
+        {
+            // result flatten list
+            var flatten = new List<ListNodeFlat>();
+
+            // aux data to get node by position
+            var nodes = new List<ListNode>();
+
+            // mapping between nodes and positions
+            var nodeToPositionDict = new Dictionary<ListNode, int>();
+
+
+            // prepare aux data (contiguous list of nodes and mapping to node positions)
+            var currentNode = linkedList;
+            int index = 0;
+            while (currentNode != null)
+            {
+                // add flatten node to list (head and tail are corrected in the end)
+                nodes.Add(currentNode);
+
+                // store map between node and its position
+                nodeToPositionDict.Add(currentNode, index);
+
+                // go to next node
+                currentNode = currentNode.Next;
+                index++;
+            }
+
+
+            // fill flatten list
+            index = 0;
+            foreach (var node in nodes)
+            {
+                // get position of that node in the list corresponding to node's ptr
+                var pos = node.Random == null ? NULL_POS : nodeToPositionDict[node.Random];
+
+                // save position in flatten structure
+                flatten.Add(new ListNodeFlat() 
+                { 
+                    Data = node.Data, 
+                    PrevPosition = (index == 0 ? NULL_POS : index - 1), 
+                    NextPosition = (index == nodes.Count - 1 ? NULL_POS : index + 1), 
+                    Random = pos }
+                );
+
+                index++;
+            }
+
+            return flatten;
+        }
+
+        public static IList<ListNodeFlat> Flatten(ListRandom randomList)
+        {
+            // flatten list starting from head node
+            var flatten = Flatten(randomList.Head);
+
+            // verify
+            Debug.Assert(flatten.Count == randomList.Count);
+
+            return flatten;
+        }
+
+        #endregion
+
+        #region Properties
+
+        public static int NULL_POS => int.MinValue;
 
         #endregion
     }

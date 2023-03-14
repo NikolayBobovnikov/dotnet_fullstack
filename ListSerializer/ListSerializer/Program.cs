@@ -6,6 +6,7 @@
         {
             var head = new ListNode() { Data = "HeadData" };
             var tail = new ListNode() { Data = "TailData" };
+            head.Next= tail;
             ListRandom s = new ListRandom() { Count = 123, Head = head, Tail = tail };
 
             using (Stream stream = new FileStream("log", FileMode.Create))
