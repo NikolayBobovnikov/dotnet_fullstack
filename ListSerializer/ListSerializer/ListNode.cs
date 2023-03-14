@@ -8,9 +8,12 @@ using System.Xml.Linq;
 
 namespace ListSerializer
 {
+    /// <summary>
+    /// Extensions for stream IO.
+    /// </summary>
     public static class Extensions
     {
-        public static void Write<T>(this Stream stream, T value)
+        public static void WriteMarshal<T>(this Stream stream, T value)
             where T : unmanaged
         {
             int size = Marshal.SizeOf(value);
@@ -29,10 +32,10 @@ namespace ListSerializer
             }
         }
 
-        public static T? Read<T>(this Stream stream)
+        public static T ReadMarshal<T>(this Stream stream)
             where T : unmanaged
         {
-            T? result = default;
+            T result = default;
             int size = Marshal.SizeOf(result);
             byte[] managedArray = new byte[size];
 
@@ -43,92 +46,101 @@ namespace ListSerializer
 
             return result;
         }
+
+        public static void Write<T>(this Stream stream, T value)
+        where T : unmanaged
+            {
+                var tSpan = MemoryMarshal.CreateSpan(ref value, 1);
+                var span = MemoryMarshal.AsBytes(tSpan);
+                stream.Write(span);
+            }
+
+        public static T Read<T>(this Stream stream)
+        where T : unmanaged
+            {
+                var result = default(T);
+                var tSpan = MemoryMarshal.CreateSpan(ref result, 1);
+                var span = MemoryMarshal.AsBytes(tSpan);
+                stream.Read(span);
+                return result;
+            }
     }
 
+    /// <summary>
+    /// Class represents node of the ListRandom linked list.
+    /// </summary>
     public class ListNode
     {
         public ListNode Previous;
         public ListNode Next;
         public ListNode Random;
         public string Data;
-
-
-        public static void Serialize(ListNode? node, Stream s)
-        {
-            if (node != null)
-            {
-                s.Write(node);
-
-                if (node.Previous != null)
-                {
-                    Serialize(node.Previous, s);
-                }
-                if (node.Next != null)
-                {
-                    Serialize(node.Next, s);
-                }
-                if (node.Random != null)
-                {
-                    Serialize(node.Random, s);
-                }
-            }
-        }
-
-        public static ListNode? Deserialize(ListNode? node, Stream s)
-        {
-            var n = s.Read<ListNode>();
-
-            if (node != null)
-            {
-                if (node.Previous != null)
-                {
-                    Serialize(node.Previous, s);
-                }
-                if (node.Next != null)
-                {
-                    Serialize(node.Next, s);
-                }
-                if (node.Random != null)
-                {
-                    Serialize(node.Random, s);
-                }
-            }
-
-            return node;
-        }
     }
 
+    /// <summary>
+    /// Class represents double linked list with Count elements, containing Head and Tail nodes on the left/right sides correspondently.
+    /// </summary>
     public class ListRandom
     {
         public ListNode Head;
         public ListNode Tail;
         public int Count;
 
+        #region Public methods
+
+        #endregion
         public void Serialize(Stream s)
         {
-            s.Write(Count);
-
-            if (Head != null)
-            {
-                ListNode.Serialize(Head, s);
-            }
-
-            if (Tail != null)
-            {
-                ListNode.Serialize(Tail, s);
-            }
+            // Go through all nodes and get their positions
+            // Map pointers to positions to resolve Random
+            // Map ListNode class to ListNodeFlat structure containing node positions instead of pointers
+            // Write flatten list of ListNodeFlat's into stream
         }
 
         public void Deserialize(Stream s)
         {
-            if (s.Read<int>() is int count)
+            // Read flatten list of ListNodeFlat's from stream
+            // Restore pointers to Random nodes from positions in flatten structure
+        }
+
+        #region Private types
+
+        /// <summary>
+        /// Intermediary class for storing instead of ListNode.
+        /// </summary>
+        private struct ListNodeFlat
+        {
+            public int PreviousPosition;
+            public int NextPosition;
+            public int Random;
+            public string Data;
+        }
+
+        #endregion
+
+        #region Private methods
+
+        private static ListRandom _RestoreFromFlatten(IList<ListNodeFlat> flatten)
+        {
+            // create ListNodes from corresponding flatten elements and store them into list
+            var nodes = flatten.Select(x => new ListNode() { Data = x.Data }).ToList();
+
+            // restore node correspondence
+            foreach (var (node, index) in nodes.Select((value, i) => (value, i)))
             {
-                Count = count;
+                node.Random = nodes[index];
             }
 
-            ListNode.Deserialize(Head, s);
-            ListNode.Deserialize(Tail, s);
+            // construct result structure
+            return new ListRandom()
+            {
+                Head = nodes.First(),
+                Tail = nodes.Last(),
+                Count = nodes.Count()
+            };
         }
+
+        #endregion
     }
 
 }
